@@ -2,68 +2,55 @@
 #include <Servo.h> 
 
 // humidity
-int sensor_pin = A0; 
-int sensor_pin2 = A3;
-int sensor_pin3 = A4;
-int output_value;
-int output_value2;
-int output_value3;
+int plant1_sensor_pin = A0; 
+int plant2_sensor_pin = A3;
+int plant3_sensor_pin = A4;
 
 //servo
-int plant3 = 0;
-int plant2 = 90;
-int plant1 = 180;
-int servoPin = 13;
+int plant3_servo_location = 0;
+int plant2_servo_location = 90;
+int plant1_servo_location = 180;
+int servo_pin = 13;
 Servo motor;
 
-void moveTo(int plant) {
-  motor.write(plant);
+void moveTo(int plant_servo_location) {
+  motor.write(plant_servo_location);
+}
+
+int get_plant_humidity(char* plant_name, int sensor_pin) {
+  int output_value = analogRead(sensor_pin);
+  output_value = map(output_value, 550, 0, 0, 100);
+  Serial.print(plant_name);
+  Serial.print(output_value < 0 ? 0 : output_value);
+  Serial.println("%");
+  return output_value;
+}
+
+void analyze(int plant_humidity, int plant_servo_location, char* plant_name){
+  if (plant_humidity < 40){
+    moveTo(plant_servo_location);
+    Serial.print("Moving to ");
+    Serial.println(plant_name);
+  }
+  delay(2000);
 }
 
 void setup() {
-  motor.attach(servoPin);
+  motor.attach(servo_pin);
   Serial.begin(9600);
   Serial.println("Reading From the Sensor ...");
   delay(2000);
 }
 
 void loop() {
-  output_value = analogRead(sensor_pin);
-  output_value = map(output_value,550,0,0,100);
-  Serial.print("Plant 1: ");
-  Serial.print(output_value < 0 ? 0 : output_value);
-  Serial.println("%");
+  int plant1_humidity = get_plant_humidity((char*)"Plant 1: ", plant1_sensor_pin);
+  analyze(plant1_humidity, plant1_servo_location, (char*) "Plant 1");
 
-  if (output_value < 40){
-    moveTo(plant1);
-    Serial.println("Moving to plant 1");
-  }
-  delay(2000);
+  int plant2_humidity = get_plant_humidity((char*)"Plant 2: ", plant2_sensor_pin);
+  analyze(plant2_humidity, plant2_servo_location, (char*) "Plant 2");
 
-
-  output_value2 = analogRead(sensor_pin2);
-  output_value2 = map(output_value2,550,0,0,100);
-  Serial.print("Plant 2: ");
-  Serial.print(output_value2 < 0 ? 0 : output_value2);
-  Serial.println("%");
-
-  if (output_value2 < 40){
-    moveTo(plant2);
-    Serial.println("Moving to plant 2");
-  }
-  delay(2000);
-
-  output_value3 = analogRead(sensor_pin3);
-  output_value3 = map(output_value3,550,0,0,100);
-  Serial.print("Plant 3: ");
-  Serial.print(output_value3 < 0 ? 0 : output_value3);
-  Serial.println("%");
-
-  if (output_value3 < 40){
-    moveTo(plant3);
-    Serial.println("Moving to plant 3");
-  }
-  delay(2000);
+  int plant3_humidity = get_plant_humidity((char*)"Plant 3: ", plant3_sensor_pin);
+  analyze(plant3_humidity, plant3_servo_location, (char*) "Plant 3");
 
   Serial.println("--------");
 }

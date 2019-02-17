@@ -1,4 +1,3 @@
-
 #include <Servo.h> 
 
 struct Plant {
@@ -10,6 +9,9 @@ struct Plant {
 struct Plant plant1;
 struct Plant plant2;
 struct Plant plant3;
+int blue_led = 11;
+int red_led = 10;
+int green_led = 9;
 int servo_pin = 13;
 Servo motor;
 
@@ -31,6 +33,14 @@ void initPlant3() {
   plant3.name = (char*) "Plant 3";
 }
 
+void turn_on(int led_pin) {
+  digitalWrite(led_pin, HIGH);
+}
+
+void turn_off(int led_pin) {
+  digitalWrite(led_pin, LOW); 
+}
+
 void moveTo(int plant_servo_location) {
   motor.write(plant_servo_location);
 }
@@ -45,34 +55,63 @@ int get_plant_humidity(Plant plant) {
   return output_value;
 }
 
-void analyze(Plant plant, int plant_humidity) {
-  if (plant_humidity < 40) {
-    moveTo(plant.servo_location);
-    Serial.print("Moving to ");
-    Serial.println(plant.name);
-  }
-  delay(2000);
+void water(Plant plant, int plant_humidity) {
+  moveTo(plant.servo_location);
+  Serial.print("Moving to ");
+  Serial.println(plant.name);
+
+  turn_on(blue_led);
+  Serial.print("Watering ");
+  Serial.println(plant.name);
+  delay(3000);
+  turn_off(blue_led);
+}
+
+bool is_watered(int plant_humidity) {
+  return plant_humidity >= 40;
+}
+
+void check_water(Plant plant) {
+  int tries = 0;
+  int plant_humidity = get_plant_humidity(plant);
+  while(!is_watered(plant_humidity)) {
+    water(plant, plant_humidity);
+      
+    tries++;
+    if(tries >= 5) 
+      break;
+    
+    plant_humidity = get_plant_humidity(plant);
+  } 
+}
+
+void check_plants() {
+  check_water(plant1);
+  check_water(plant2);
+  check_water(plant3);
+
+  Serial.println("--------");
 }
 
 void setup() {
+  // leds
+  pinMode(blue_led, OUTPUT);
+  pinMode(red_led, OUTPUT);
+  pinMode(green_led, OUTPUT);
+
+  // servo
   motor.attach(servo_pin);
+
+  // humidity
   Serial.begin(9600);
   Serial.println("Reading From the Sensor...");
   initPlant1();
   initPlant2();
   initPlant3();
+  
   delay(2000);
 }
 
 void loop() {
-  int plant1_humidity = get_plant_humidity(plant1);
-  analyze(plant1, plant1_humidity);
-
-  int plant2_humidity = get_plant_humidity(plant2);
-  analyze(plant2, plant2_humidity);
-
-  int plant3_humidity = get_plant_humidity(plant3);
-  analyze(plant3, plant3_humidity);
-
-  Serial.println("--------");
+  check_plants();
 }

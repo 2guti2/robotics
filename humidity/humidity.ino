@@ -6,31 +6,33 @@ struct Plant {
   char* name;
 };
 
-struct Plant plant1;
+int max_amount_of_tries = 2;
+
+int play_button = 2;
+int play_button_val = 0;
+int play_button_state = 0;
+int play_button_old_val = 0; 
+
 struct Plant plant2;
 struct Plant plant3;
-int blue_led = 11;
-int red_led = 10;
+
 int green_led = 9;
 int servo_pin = 13;
 Servo motor;
 
-void initPlant1() {
-  plant1.sensor_pin = A0;
-  plant1.servo_location = 180;
-  plant1.name = (char*) "Plant 1";
-}
+int watering_time = 2000;
+int water_pump = 7;
 
 void initPlant2() {
   plant2.sensor_pin = A3;
   plant2.servo_location = 90;
-  plant2.name = (char*) "Plant 2";
+  plant2.name = (char*) "Plant A";
 }
 
 void initPlant3() {
   plant3.sensor_pin = A4;
   plant3.servo_location = 0;
-  plant3.name = (char*) "Plant 3";
+  plant3.name = (char*) "Plant B";
 }
 
 void turn_on(int led_pin) {
@@ -55,16 +57,25 @@ int get_plant_humidity(Plant plant) {
   return output_value;
 }
 
+void turn_on_pump(){
+  digitalWrite(water_pump, LOW); 
+}
+
+void turn_off_pump(){
+  digitalWrite(water_pump, HIGH); 
+}
+
 void water(Plant plant, int plant_humidity) {
   moveTo(plant.servo_location);
   Serial.print("Moving to ");
   Serial.println(plant.name);
 
-  turn_on(blue_led);
+  turn_on_pump(); 
   Serial.print("Watering ");
   Serial.println(plant.name);
+  delay(watering_time);
+  turn_off_pump(); 
   delay(3000);
-  turn_off(blue_led);
 }
 
 bool is_watered(int plant_humidity) {
@@ -78,7 +89,7 @@ void check_water(Plant plant) {
     water(plant, plant_humidity);
       
     tries++;
-    if(tries >= 5) 
+    if(tries >= max_amount_of_tries) 
       break;
     
     plant_humidity = get_plant_humidity(plant);
@@ -86,17 +97,28 @@ void check_water(Plant plant) {
 }
 
 void check_plants() {
-  check_water(plant1);
   check_water(plant2);
   check_water(plant3);
 
   Serial.println("--------");
 }
 
+void turn_off_in_next_loop() {
+  if(play_button_state != 1) {
+    Serial.println("Turning on");
+    turn_on(green_led);
+  }
+  play_button_state = 1;
+}
+
 void setup() {
+  pinMode(play_button, INPUT);
+  pinMode(water_pump, OUTPUT);
+  attachInterrupt(digitalPinToInterrupt(2), turn_off_in_next_loop, FALLING);
+
+  turn_off_pump();
+  
   // leds
-  pinMode(blue_led, OUTPUT);
-  pinMode(red_led, OUTPUT);
   pinMode(green_led, OUTPUT);
 
   // servo
@@ -104,14 +126,21 @@ void setup() {
 
   // humidity
   Serial.begin(9600);
-  Serial.println("Reading From the Sensor...");
-  initPlant1();
   initPlant2();
   initPlant3();
   
-  delay(2000);
+  Serial.println("Ready to water plants.");
+  Serial.println("Initial state:");
+  get_plant_humidity(plant2);
+  get_plant_humidity(plant3);
 }
 
 void loop() {
-  check_plants();
+  if (play_button_state==1) {
+   check_plants();
+  }
+  else {
+   turn_off(green_led);
+  }
+  delay(2000);
 }
